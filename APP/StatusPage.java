@@ -5,6 +5,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -20,6 +21,8 @@ import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
+
+import org.checkerframework.checker.units.qual.A;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -46,6 +49,7 @@ public class StatusPage extends AppCompatActivity {
     String fc1Alert;
     String fc1Date;
     String fc1Voltage;
+    ArrayList<Float> voltagesGlobal = new ArrayList<Float>(); //global voltages array
 
     private static final String TAG = "error";
 
@@ -81,10 +85,6 @@ public class StatusPage extends AppCompatActivity {
         fuelCells.add("Fuel Cell 15");
         fuelCells.add("Fuel Cell 16");
 
-        barChart = (BarChart) findViewById(R.id.status_page);
-        barEntries = new ArrayList<>();
-        final GlobalClass voltagesGlobal = (GlobalClass) getApplicationContext(); //global variable for voltage array
-
         //read info from database
         databaseRef = database.getReference("fuelcells");
 
@@ -95,15 +95,20 @@ public class StatusPage extends AppCompatActivity {
                 public void onDataChange(@NonNull DataSnapshot snapshot) {
                     if (snapshot.exists()) {
                         for (DataSnapshot ds : snapshot.getChildren()) {
-                            fc1Alert = ds.getValue(String.class);
-                            fc1Date = ds.getValue(String.class);
-                            fc1Voltage = ds.getValue(String.class);
+                            String key = ds.getKey();
+                            if (key.equals("alert")){
+                                fc1Alert = ds.getValue(String.class);
+                            } else if (key.equals("date")){
+                                fc1Date = ds.getValue(String.class);
+                            } else if (key.equals("voltageLevel")){
+                                fc1Voltage = ds.getValue(String.class);
+                            }
                         }
                     }
 
                     voltageLevel = Float.parseFloat(fc1Voltage);
                     voltages.add(voltageLevel);
-                    voltagesGlobal.setVoltages(voltages);
+                    voltagesGlobal = voltages;
                 }
 
                 @Override
@@ -113,28 +118,42 @@ public class StatusPage extends AppCompatActivity {
             });
         }
 
-        ArrayList<Float> test = voltagesGlobal.getVoltages(); //local variable set to global variable so that values can accessed
+        // Wait for some time to ensure all the data has been retrieved from the database
+        new Handler().postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                createGraph();
+            }
+        }, 1000);
 
-        //for loop adding values as bar entries
-        for (int i = 0; i < test.size(); i++) {
-            barEntries.add(new BarEntry(test.get(i), i+1));
+    }
+
+    private void createGraph() { //create status graph
+        ArrayList<Float> test = voltagesGlobal; //local variable set to global variable so that values can accessed
+
+        barChart = (BarChart) findViewById(R.id.status_page);
+        barEntries = new ArrayList<>();
+        if (test != null) {
+            //for loop adding values as bar entries
+            for (int i = 0; i < test.size(); i++) {
+                barEntries.add(new BarEntry(test.get(i), i));
+            }
+
+            //setting up graph
+            barDataSet = new BarDataSet(barEntries, "Fuel Cells");
+            barDataSet.setColors(ColorTemplate.LIBERTY_COLORS, 255);
+            barDataSet.setValueTextColor(0);
+            barData = new BarData(fuelCells, barDataSet);
+            barChart.setData(barData);
+            barChart.setDescription("Status of Fuel Cells");
+            barChart.setTouchEnabled(true);
+            barChart.setDragEnabled(true);
+            barChart.setScaleEnabled(true);
+
+            //refreshing the graph with new data
+            barChart.notifyDataSetChanged();
+            barChart.invalidate();
         }
-
-        //setting up graph
-        barDataSet = new BarDataSet(barEntries, "Fuel Cells");
-        barDataSet.setColors(ColorTemplate.LIBERTY_COLORS, 255);
-        barDataSet.setValueTextColor(0);
-        barData = new BarData(fuelCells, barDataSet);
-        barChart.setData(barData);
-        barChart.setDescription("Status of Fuel Cells");
-        barChart.setTouchEnabled(true);
-        barChart.setDragEnabled(true);
-        barChart.setScaleEnabled(true);
-
-        //refreshing the graph with new data
-        barChart.notifyDataSetChanged();
-        barChart.invalidate();
-
     }
 
     //return home button functionality
