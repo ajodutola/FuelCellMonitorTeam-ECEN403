@@ -5,6 +5,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -44,22 +45,23 @@ public class HistoricalTrends extends AppCompatActivity {
 
     ScatterChart scatterChart;
     ArrayList<String> times = new ArrayList<>();
-   // Random random;
     ArrayList<Entry> scatterEntries = new ArrayList<>();
     ScatterDataSet scatterDataSet;
     ScatterData scatterData;
     private Button returnHome;
     ArrayList<Float> voltages = new ArrayList<Float>();
     float voltageLevel;
+    int hour = 0;
 
     private DatabaseReference databaseRef;
     private FirebaseDatabase database = FirebaseDatabase.getInstance();
-    //private List<FuelCell> fuelCell = new ArrayList<>();
-    //FuelCellInformation fc1Info = new FuelCellInformation();
 
     String fc1Alert;
     String fc1Date;
     String fc1Voltage;
+    ArrayList<Float> voltagesGlobal = new ArrayList<Float>(); //global voltages array
+    ArrayList<ArrayList<Float>> scatterVoltages = new ArrayList<>();
+
 
     private static final String TAG = "error";
 
@@ -68,11 +70,6 @@ public class HistoricalTrends extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_historical_trends);
-
-//        startDate = (EditText) findViewById(R.id.startDate1);
-//        endDate = (EditText) findViewById(R.id.endDate1);
-        //startValue = startDate.getText().toString();
-        //endValue = endDate.getText().toString();
 
         returnHome = (Button) findViewById(R.id.returnHomeFromStatus);
         returnHome.setOnClickListener(new View.OnClickListener() {
@@ -122,15 +119,20 @@ public class HistoricalTrends extends AppCompatActivity {
                 public void onDataChange(@NonNull DataSnapshot snapshot) {
                     if (snapshot.exists()) {
                         for (DataSnapshot ds : snapshot.getChildren()) {
-                            fc1Alert = ds.getValue(String.class);
-                            fc1Date = ds.getValue(String.class);
-                            fc1Voltage = ds.getValue(String.class);
+                            String key = ds.getKey();
+                            if (key.equals("alert")){
+                                fc1Alert = ds.getValue(String.class);
+                            } else if (key.equals("date")){
+                                fc1Date = ds.getValue(String.class);
+                            } else if (key.equals("voltageLevel")){
+                                fc1Voltage = ds.getValue(String.class);
+                            }
                         }
                     }
 
                     voltageLevel = Float.parseFloat(fc1Voltage);
                     voltages.add(voltageLevel);
-                    voltagesGlobal3.setVoltages(voltages);
+                    voltagesGlobal = voltages;
                 }
 
                 @Override
@@ -140,19 +142,30 @@ public class HistoricalTrends extends AppCompatActivity {
             });
         }
 
-        ArrayList<Float> test = voltagesGlobal3.getVoltages(); //local variable set to global variable so that values can accessed
+        // Wait for some time to ensure all the data has been retrieved from the database
+        new Handler().postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                createHistoricalGraph();
+            }
+        }, 1000);
 
-        //for loop adding values as bar entries
-        for (int i = 0; i < test.size(); i++) {
-            scatterEntries.add(new Entry(test.get(i), 1));
-        }
+    }
+
+    private void createHistoricalGraph() { //create status graph
+        ArrayList<Float> test = voltagesGlobal; //local variable set to global variable so that values can accessed
+
+        scatterVoltages.add(test);
+
+        scatterChart = (ScatterChart) findViewById(R.id.historical_data);
+        scatterEntries = new ArrayList<>();
 
         //setting up graph
         scatterDataSet = new ScatterDataSet(scatterEntries, "Fuel Cells");
         scatterDataSet.setColors(ColorTemplate.LIBERTY_COLORS, 255);
         scatterDataSet.setValueTextColor(0);
         scatterDataSet.setScatterShape(ScatterChart.ScatterShape.CIRCLE);
-        scatterData = new ScatterData(times, scatterDataSet);
+        scatterData = new ScatterData(getTimeLabels(), scatterDataSet);
         scatterChart.setData(scatterData);
         scatterChart.setDescription("Historical Trends of Fuel Cells");
         scatterChart.setTouchEnabled(true);
@@ -163,6 +176,62 @@ public class HistoricalTrends extends AppCompatActivity {
         scatterChart.notifyDataSetChanged();
         scatterChart.invalidate();
 
+
+        // start a new thread to update the voltage levels every hour
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (hour < 24) { // run for 24 hours
+                    try {
+                        Thread.sleep(3600000); // wait for an hour
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    updateVoltageList(); // update voltage list with a new voltage level
+                    updateScatterChart(); // update scatter chart with all voltage levels
+                    hour++;
+                }
+            }
+        }).start();
+    }
+
+    // method to update the scatter voltage list with a new voltage level
+    private void updateVoltageList() {
+        ArrayList<Float> test = voltagesGlobal; //local variable set to global variable so that values can accessed
+        scatterVoltages.add(test);
+    }
+
+    // method to update the scatter chart with all voltage levels
+    private void updateScatterChart() {
+        ArrayList<Float> test = voltagesGlobal; //local variable set to global variable so that values can accessed
+
+        if (test != null) {
+            //for loop adding values as bar entries
+            for (int i = 0; i < scatterVoltages.size(); i++) {
+                for (int j = 0; j < test.size(); j++) {
+                    scatterEntries.add(new Entry(scatterVoltages.get(i).get(j), i + 1));
+                }
+            }
+        }
+
+        scatterData = new ScatterData(getTimeLabels(), scatterDataSet); // update scatter data
+        scatterChart.setData(scatterData); // update scatter chart
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                scatterChart.notifyDataSetChanged(); // notify chart that data has changed
+                scatterChart.invalidate(); // refresh chart
+            }
+        });
+    }
+
+    // method to get time labels for scatter chart
+    private ArrayList<String> getTimeLabels() {
+        ArrayList<String> times = new ArrayList<>();
+        for (int i = 0; i < scatterVoltages.size(); i++) {
+            times.add(String.format("%02d:00", i)); // add hour label for each voltage level
+        }
+        return times;
     }
 
 
