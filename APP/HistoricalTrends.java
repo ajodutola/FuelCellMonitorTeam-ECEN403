@@ -50,6 +50,7 @@ public class HistoricalTrends extends AppCompatActivity {
     ScatterData scatterData;
     private Button returnHome;
     ArrayList<Float> voltages = new ArrayList<Float>();
+    ArrayList<Float> voltagesHour = new ArrayList<Float>();
     float voltageLevel;
     int hour = 0;
 
@@ -81,33 +82,6 @@ public class HistoricalTrends extends AppCompatActivity {
 
         scatterChart = (ScatterChart) findViewById(R.id.historical_data);
         final GlobalClass voltagesGlobal3 = (GlobalClass) getApplicationContext(); //global variable for voltage array
-
-        //adding 24 hour period to time array for x-axis
-        times.add("00:00");
-        times.add("01:00");
-        times.add("02:00");
-        times.add("03:00");
-        times.add("04:00");
-        times.add("05:00");
-        times.add("06:00");
-        times.add("07:00");
-        times.add("08:00");
-        times.add("09:00");
-        times.add("10:00");
-        times.add("11:00");
-        times.add("12:00");
-        times.add("13:00");
-        times.add("14:00");
-        times.add("15:00");
-        times.add("16:00");
-        times.add("17:00");
-        times.add("18:00");
-        times.add("19:00");
-        times.add("20:00");
-        times.add("21:00");
-        times.add("22:00");
-        times.add("23:00");
-        times.add("24:00");
 
         //read info from database
         databaseRef = database.getReference("fuelcells");
@@ -165,11 +139,13 @@ public class HistoricalTrends extends AppCompatActivity {
         scatterDataSet.setColors(ColorTemplate.LIBERTY_COLORS, 255);
         scatterDataSet.setValueTextColor(0);
         scatterDataSet.setScatterShape(ScatterChart.ScatterShape.CIRCLE);
+        scatterDataSet.setScatterShapeSize(0.5f);
         scatterData = new ScatterData(getTimeLabels(), scatterDataSet);
         scatterChart.setData(scatterData);
         scatterChart.setDescription("Historical Trends of Fuel Cells");
         scatterChart.setTouchEnabled(true);
         scatterChart.setDragEnabled(true);
+        scatterChart.setPinchZoom(true);
         scatterChart.setScaleEnabled(true);
 
         //refreshing the graph with new data
@@ -202,36 +178,77 @@ public class HistoricalTrends extends AppCompatActivity {
     }
 
     // method to update the scatter chart with all voltage levels
+//    private void updateScatterChart() {
+//        ArrayList<Float> test = voltagesGlobal; //local variable set to global variable so that values can accessed
+//
+//        if (test != null) {
+//            //for loop adding values as bar entries
+//            for (int i = 0; i < scatterVoltages.size(); i++) {
+//                for (int j = 0; j < test.size(); j++) {
+//                    scatterEntries.add(new Entry(scatterVoltages.get(i).get(j), i));
+//                }
+//            }
+//        }
+//
+//        scatterData = new ScatterData(getTimeLabels(), scatterDataSet); // update scatter data
+//        scatterChart.setData(scatterData); // update scatter chart
+//        runOnUiThread(new Runnable() {
+//            @Override
+//            public void run() {
+//                scatterChart.notifyDataSetChanged(); // notify chart that data has changed
+//                scatterChart.invalidate(); // refresh chart
+//            }
+//        });
+//    }
+
     private void updateScatterChart() {
-        ArrayList<Float> test = voltagesGlobal; //local variable set to global variable so that values can accessed
+        ArrayList<Float> test = voltagesGlobal; // local variable set to global variable so that values can be accessed
 
         if (test != null) {
-            //for loop adding values as bar entries
+            // create a new ArrayList<Entry> to store the new entries that we will add to the chart
+            ArrayList<Entry> newEntries = new ArrayList<>();
+
+            // loop through all the values in scatter voltages
             for (int i = 0; i < scatterVoltages.size(); i++) {
-                for (int j = 0; j < test.size(); j++) {
-                    scatterEntries.add(new Entry(scatterVoltages.get(i).get(j), i + 1));
+                for (int j = 0; j < test.size(); j++){
+                    // create a new Entry object with the x-value set to the index of the voltage and the y-value set to the current hour
+                    Entry newEntry = new Entry(scatterVoltages.get(i).get(j), i); //Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+                    // add the new entry to newEntries
+                    newEntries.add(newEntry);
                 }
             }
-        }
 
-        scatterData = new ScatterData(getTimeLabels(), scatterDataSet); // update scatter data
-        scatterChart.setData(scatterData); // update scatter chart
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                scatterChart.notifyDataSetChanged(); // notify chart that data has changed
-                scatterChart.invalidate(); // refresh chart
-            }
-        });
+            // add all the entries in scatterEntries to newEntries
+            newEntries.addAll(scatterEntries);
+
+            // update scatterDataSet with the new scatterEntries
+            scatterDataSet = new ScatterDataSet(newEntries, "Fuel Cells");
+            scatterDataSet.setScatterShape(ScatterChart.ScatterShape.CIRCLE);
+            scatterDataSet.setColors(ColorTemplate.LIBERTY_COLORS, 255);
+
+            // set the data of scatterChart to a new ScatterData object created using getTimeLabels() and scatterDataSet
+            scatterData = new ScatterData(getTimeLabels(), scatterDataSet);
+            scatterChart.setData(scatterData);
+
+            // notify the chart that the data has changed and refresh it
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    scatterChart.notifyDataSetChanged();
+                    scatterChart.invalidate();
+                }
+            });
+        }
     }
+
 
     // method to get time labels for scatter chart
     private ArrayList<String> getTimeLabels() {
-        ArrayList<String> times = new ArrayList<>();
+        ArrayList<String> timesL = new ArrayList<>();
         for (int i = 0; i < scatterVoltages.size(); i++) {
-            times.add(String.format("%02d:00", i)); // add hour label for each voltage level
+            timesL.add(String.format("%02d:00", i)); // add hour label for each voltage level
         }
-        return times;
+        return timesL;
     }
 
 
