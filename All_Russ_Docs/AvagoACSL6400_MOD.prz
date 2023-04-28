@@ -1,0 +1,147 @@
+* ACSL-6400 SPICE Macromodel 
+* Rev. A
+* 02/14
+*
+*
+* This is the behavioural model for the above-mentioned part number.
+* It is valid for functional simulation over the range specified below.
+* Supply range: 3.3V / 5V
+* Temperature: 25C
+*
+* Macromodels provided by Avago Technologies are not warranted
+* as fully representing all of the specifications and operating 
+* characteristics of the product. 
+*
+* Macromodels are useful for evaluating product performance but they
+* cannot model exact device performance under all conditions, nor are
+* they intended to replace breadboarding for final verification.
+*
+* Copyright 2014 Avago Technologies Limited. All Rights Reserved
+********************************************************************************
+.subckt ACSL6400 AN1 CA1 AN2 CA2 AN3 CA3 AN4 CA4 GND1 VDD1 VO4 VO3 VO2 VO1
+xch1 AN1 CA1 CA2 AN2 GND1 VO2 VO1 VDD1 isoch
+xch2 AN3 CA3 CA4 AN4 GND1 VO4 VO3 VDD1 isoch
+.ends ACSL6400
+
+.subckt isoch 1 2 3 4 5 6 7 8 
+xicc 5 8  icc
+xlimitl21 5 24 25 limitl
+xlimitl22 5 27 28 limitl
+xlimitl12 5 18 19 limitl
+xlimitl11 5 15 16 limitl
+vinside 13 5 DC 10
+xcomp21 5 13 5 23 24 comparator
+xcomp22 5 13 5 26 27 comparator
+xcomp12 5 13 5 17 18 comparator
+xcomp11 5 13 5 14 15 comparator
+xlimit21 5 21 22 limit
+xlimit11 5 11 12 limit
+egate2 29 5  28 5 1
+egate1 101 5  19 5 1
+xled2 5 21 3 4 fastled
+xled1 5 11 2 1 fastled
+cbe2 201 5 10e-12
+cce2 6 5 20e-12
+c21 23 5 1e-9
+c22 26 5 1e-9
+c12 17 5 1e-9
+c11 14 5 1e-9
+cbe1 102 5 10e-12
+cce1 7 5 20e-12
+rc2 6 203 15
+re2 202 5 1
+rb2 29 201 1e3
+r21 22 23 45
+r22 25 26 45
+r12 16 17 45
+r11 12 14 45
+rb1 101 102 1e3
+re1 103 5 1
+rc1 7 104 15
+q2 203 201 202  npnmod
+q1 104 102 103  npnmod
+.MODEL nmosswitch nmos (vto=+0.7)
+.MODEL nmosmod nmos (vto=+0.5   RS=0.3  LAMBDA=0)
+.MODEL npnmod  npn bf=2  
+.MODEL pnpmod  pnp bf=100 
+.MODEL dmod D IS=2.22P CJO=1P VJ=.376 M=.139 N=1.07
+.ends isoch
+
+.subckt icc 1 2 
+r2 3 1 157
+r1 6 4 100
+qnpn2 4 3 1  npnmod
+qnpn1 5 4 3  npnmod
+qpnp2 5 5 2  pnpmod
+qpnp1 6 5 2  pnpmod
+.MODEL nmosswitch nmos (vto=+0.7)
+.MODEL nmosmod nmos (vto=+0.5   RS=0.3  LAMBDA=0)
+.MODEL npnmod  npn bf=2  
+.MODEL pnpmod  pnp bf=100 
+.MODEL dmod D IS=2.22P CJO=1P VJ=.376 M=.139 N=1.07
+.ends icc
+
+.subckt limitl 1 2 3
+eisolate 3 1  8 1 1
+elimit 4 1  2 7 10
+vnegativ 6 1 DC -9
+vthreshold 7 1 DC 2
+vpositive 5 1 DC 10
+dnega 6 8 dmod
+dposi 8 5 dmod
+r2 4 8 1e3
+r1 2 7 10e6
+.MODEL nmosswitch nmos (vto=+0.7)
+.MODEL nmosmod nmos (vto=+0.5   RS=0.3  LAMBDA=0)
+.MODEL npnmod  npn bf=2  
+.MODEL pnpmod  pnp bf=100 
+.MODEL dmod D IS=2.22P CJO=1P VJ=.376 M=.139 N=1.07
+.ends limitl
+
+.subckt comparator 1 2 3 4 5
+mcopa 5 6 1 1 nmosswitch L=1e-6 W=100e-6
+egain 6 1  3 4 1e3
+ro 5 2 10e3
+rgate 6 1 10e3
+r1n 3 4 1e6
+.MODEL nmosswitch nmos (vto=+0.7)
+.MODEL nmosmod nmos (vto=+0.5   RS=0.3  LAMBDA=0)
+.MODEL npnmod  npn bf=2  
+.MODEL pnpmod  pnp bf=100 
+.MODEL dmod D IS=2.22P CJO=1P VJ=.376 M=.139 N=1.07
+.ends comparator
+
+.subckt limit 1 2 3
+eisolate 3 1  8 1 1
+elimit 4 1  2 7 10
+vnegativ 6 1 DC -9
+vthreshold 7 1 DC 0
+vpositive 5 1 DC 10
+dnega 6 8 dmod
+dposi 8 5 dmod
+r2 4 8 1e3
+r1 2 7 1e6
+.MODEL nmosswitch nmos (vto=+0.7)
+.MODEL nmosmod nmos (vto=+0.5   RS=0.3  LAMBDA=0)
+.MODEL npnmod  npn bf=2  
+.MODEL pnpmod  pnp bf=100 
+.MODEL dmod D IS=2.22P CJO=1P VJ=.376 M=.139 N=1.07
+.ends limit
+
+.subckt fastled 1 3 4 5
+gband 1 3  9 1 1 
+fphoto 1 9  vsense  1 
+cdelay 9 1 1e-12
+cband 3 1 1e-12
+ithre 3 1 DC 3.7e-3
+vsense 8 4 DC 0
+dled 6 8 lednor
+rband 3 1 1e3 
+rthermo 9 1 1 
+rled 5 6 1
+.MODEL  LEDNOR D IS=5E-16 N=2 XTI=3 EG=2.1 BV=5 IBV=10u
++  CJO=6p VJ=.75 M=.3333 FC=.5 TT=20n
+.ends fastled
+
+
+

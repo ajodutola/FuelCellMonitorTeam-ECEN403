@@ -1,0 +1,126 @@
+#include <SPI.h>
+
+#define CS 10    // Selection pin
+
+
+void setup() {
+  SPI.begin();
+  Serial.begin(9600);
+  pinMode(CS, OUTPUT);
+  digitalWrite(CS, HIGH);
+  SPI.setClockDivider(128);
+ 
+}
+  int read_adc(int channel) {
+  uint16_t adcvalue;
+    byte commandbits;  // Read nothing....
+
+  switch(channel)  // Switch case to select channel
+  {
+    case 1:  {
+      commandbits = B10000111;  // Select channel 0 (LPS-1 Uout)
+      }
+      break;
+    case 2:  {
+      commandbits = B11000111;  // Select channel 1 (LPS-2 Uout)
+      }
+      break;
+    case 3:  {
+      commandbits = B10010111;  // Select channel 2 (LPS-2 Kout)
+      }
+      break;
+    case 4:  {
+      commandbits = B11010111;  // Select channel 3 (External)
+      }
+      break;
+    case 5:  {
+      commandbits = B10100111;  // Select channel 4 (2.500V Reference)
+      }
+      break;
+    case 6:  {
+      commandbits = B11100111;  // Select channel 4 (2.500V Reference)
+      }
+      break;
+    case 7:  {
+      commandbits = B10110111;  // Select channel 4 (2.500V Reference)
+      }
+      break;
+    case 8:  {
+      commandbits = B11110111;  // Select channel 4 (2.500V Reference)
+      }
+      break;
+  }
+  SPI.beginTransaction(SPISettings(110000, MSBFIRST, SPI_MODE3));
+  digitalWrite(CS, LOW);
+  delayMicroseconds(2);
+  SPI.transfer(commandbits);
+  delayMicroseconds(2);
+  adcvalue = SPI.transfer16(0);
+  digitalWrite(CS, HIGH);
+  Serial.println(adcvalue);
+  //adcvalue = adcvalue/pow(2, 16);
+  return adcvalue;
+}
+void loop() {
+  for (int i = 1; i <= 8; i++){
+    delay(500);
+    uint16_t ADC_Value;
+    ADC_Value = read_adc(i);//*(255/pow(2, 16));
+    Serial.print("Channel_");
+    Serial.print(i);
+    Serial.print(" = ");
+    Serial.print(ADC_Value);
+    Serial.println();
+  }
+  Serial.println();
+}  
+ /* int read_adc(int channel) {
+  uint16_t adcvalue;
+    byte commandbits;  // Read nothing....
+
+  switch(channel)  // Switch case to select channel
+  {
+    case 1:  {
+      commandbits = B10000111;  // Select channel 0 (LPS-1 Uout)
+      }
+      break;
+    case 2:  {
+      commandbits = B11000111;  // Select channel 1 (LPS-2 Uout)
+      }
+      break;
+    case 3:  {
+      commandbits = B10010111;  // Select channel 2 (LPS-2 Kout)
+      }
+      break;
+    case 4:  {
+      commandbits = B11010111;  // Select channel 3 (External)
+      }
+      break;
+    case 5:  {
+      commandbits = B10100111;  // Select channel 4 (2.500V Reference)
+      }
+      break;
+    case 6:  {
+      commandbits = B11100111;  // Select channel 4 (2.500V Reference)
+      }
+      break;
+    case 7:  {
+      commandbits = B10110111;  // Select channel 4 (2.500V Reference)
+      }
+      break;
+    case 8:  {
+      commandbits = B11110111;  // Select channel 4 (2.500V Reference)
+      }
+      break;
+  }
+  SPI.beginTransaction(SPISettings(2200000, MSBFIRST, SPI_MODE1));
+  digitalWrite(CS, LOW);
+  delayMicroseconds(2000000);
+  SPI.transfer(commandbits);
+  delayMicroseconds(2000000);
+  adcvalue = SPI.transfer(0);
+  digitalWrite(CS, HIGH);
+  Serial.println(adcvalue);
+  //adcvalue = adcvalue/pow(2, 16);
+  return adcvalue;
+}*/

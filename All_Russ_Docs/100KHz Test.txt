@@ -1,0 +1,15 @@
+void setup() {
+  pinMode(10, OUTPUT);
+  digitalWrite(10, LOW);
+  // put your setup code here, to run once:
+
+}
+
+void loop() {
+digitalWrite(10, HIGH);
+delayMicroseconds(0.001);
+digitalWrite(10, LOW);
+delayMicroseconds(0.001);
+  // put your main code here, to run repeatedly:
+
+}
